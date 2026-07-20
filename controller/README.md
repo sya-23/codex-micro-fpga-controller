@@ -122,7 +122,9 @@ Invoke-RestMethod -Method Post `
 
 语音播报只对带本地 Codex rollout JSONL 的会话生效。Controller 从最新
 `task_complete.last_agent_message` 读取回复，并调用 Windows 离线 SAPI；优先选择
-`zh-CN` 语音。播报在线程中执行，不阻塞串口和按键。可用 `--no-speech` 关闭。
+`zh-CN` 的 `Microsoft Huihui Desktop` 语音。播报前会移除 Markdown、代码块、
+链接和 URL，避免把格式符号逐字念出。输入以 UTF-8 传给 PowerShell，播报在线程
+中执行，不阻塞串口和按键。可用 `--no-speech` 关闭。
 - ChatGPT/Codex 桌面端目前没有公开的会话状态 API；本控制器不会读取私有接口或用坐标点击猜状态。列表状态读取失败时使用状态6或保留当前状态，不误报完成。
 
 ## 桌面端边界

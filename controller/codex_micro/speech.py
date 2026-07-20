@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import subprocess
 import threading
 
@@ -13,13 +14,43 @@ try {
     $voice = $speaker.GetInstalledVoices() |
         Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -eq 'zh-CN' } |
         Select-Object -First 1
-    if ($voice) { $speaker.SelectVoice($voice.VoiceInfo.Name) }
-    $text = [Console]::In.ReadToEnd()
+    if (-not $voice) { throw "No zh-CN SAPI voice is installed" }
+    $speaker.SelectVoice($voice.VoiceInfo.Name)
+    $input = [Console]::OpenStandardInput()
+    $reader = New-Object System.IO.StreamReader(
+        $input,
+        [System.Text.Encoding]::UTF8,
+        $false
+    )
+    $text = $reader.ReadToEnd()
+    $reader.Dispose()
     if ($text) { $speaker.Speak($text) }
 } finally {
     $speaker.Dispose()
 }
 """
+
+_CODE_BLOCK = re.compile(r"```.*?```", re.DOTALL)
+_INLINE_CODE = re.compile(r"`[^`]*`")
+_MARKDOWN_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_URL = re.compile(r"https?://\S+")
+_LIST_MARKER = re.compile(r"(?m)^\s*[-*+]\s+")
+_HEADING_MARKER = re.compile(r"(?m)^\s*#{1,6}\s*")
+
+
+def prepare_speech_text(text: str) -> str:
+    """Keep natural-language reply text and remove markup/code noise."""
+    text = _CODE_BLOCK.sub(" ", text)
+    text = _INLINE_CODE.sub(" ", text)
+    text = _MARKDOWN_LINK.sub(r"\1", text)
+    text = _URL.sub(" ", text)
+    text = _LIST_MARKER.sub("", text)
+    text = _HEADING_MARKER.sub("", text)
+    text = text.replace("**", "").replace("__", "")
+    text = text.replace("|", "，")
+    text = re.sub(r"[\\\[\]{}<>]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 class WindowsSpeechSynthesizer:
@@ -31,7 +62,7 @@ class WindowsSpeechSynthesizer:
         self._process: subprocess.Popen[str] | None = None
 
     def speak(self, text: str) -> bool:
-        text = text.strip()
+        text = prepare_speech_text(text)
         if not text:
             return False
         with self._lock:
@@ -65,15 +96,14 @@ class WindowsSpeechSynthesizer:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
-                text=True,
-                encoding="utf-8",
                 creationflags=creationflags,
             )
             with self._lock:
                 self._process = process
-            _stdout, stderr = process.communicate(text)
+            _stdout, stderr = process.communicate(text.encode("utf-8"))
             if process.returncode:
-                LOGGER.warning("Windows TTS failed: %s", stderr.strip())
+                message = stderr.decode("utf-8", errors="replace").strip()
+                LOGGER.warning("Windows TTS failed: %s", message)
         except OSError:
             LOGGER.exception("could not start Windows TTS")
         finally:
