@@ -105,9 +105,10 @@ Operation mode:
 Reply playback requires the slot to be bound to a local Codex rollout JSONL
 session. The controller reads the latest `task_complete.last_agent_message`
 and uses the installed Windows `Microsoft Huihui Desktop` (`zh-CN`) SAPI
-voice. Markdown, code blocks, links and URLs are removed before speech, and
-the text is passed to PowerShell as UTF-8. It does not upload the conversation
-or access private desktop APIs.
+voice. Markdown, code blocks, links and URLs are removed before speech.
+PowerShell renders a WAV from a UTF-8 temporary text file, then Python plays
+the WAV so a muted PowerShell audio session cannot suppress it. It does not
+upload the conversation or access private desktop APIs.
 
 ## FPGA Build and Programming
 

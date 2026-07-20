@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import subprocess
+import tempfile
 import threading
+import winsound
+from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,15 +20,18 @@ try {
         Select-Object -First 1
     if (-not $voice) { throw "No zh-CN SAPI voice is installed" }
     $speaker.SelectVoice($voice.VoiceInfo.Name)
-    $input = [Console]::OpenStandardInput()
-    $reader = New-Object System.IO.StreamReader(
-        $input,
-        [System.Text.Encoding]::UTF8,
-        $false
+    $textPath = [Environment]::GetEnvironmentVariable('CODEX_MICRO_SPEECH_TEXT')
+    $outputPath = [Environment]::GetEnvironmentVariable('CODEX_MICRO_SPEECH_WAV')
+    if (-not $textPath) { throw "Speech text path is missing" }
+    if (-not $outputPath) { throw "Speech WAV path is missing" }
+    $text = [System.IO.File]::ReadAllText(
+        $textPath,
+        [System.Text.Encoding]::UTF8
     )
-    $text = $reader.ReadToEnd()
-    $reader.Dispose()
-    if ($text) { $speaker.Speak($text) }
+    if ($text) {
+        $speaker.SetOutputToWaveFile($outputPath)
+        $speaker.Speak($text)
+    }
 } finally {
     $speaker.Dispose()
 }
@@ -84,30 +91,47 @@ class WindowsSpeechSynthesizer:
             thread = self._thread
         if process is not None and process.poll() is None:
             process.terminate()
+        try:
+            winsound.PlaySound(None, winsound.SND_PURGE)
+        except RuntimeError:
+            pass
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=2)
 
     def _run(self, text: str) -> None:
         process = None
-        try:
-            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            process = subprocess.Popen(
-                ["powershell.exe", "-NoProfile", "-Command", _SPEECH_SCRIPT],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                creationflags=creationflags,
-            )
-            with self._lock:
-                self._process = process
-            _stdout, stderr = process.communicate(text.encode("utf-8"))
-            if process.returncode:
-                message = stderr.decode("utf-8", errors="replace").strip()
-                LOGGER.warning("Windows TTS failed: %s", message)
-        except OSError:
-            LOGGER.exception("could not start Windows TTS")
-        finally:
-            with self._lock:
-                if self._process is process:
-                    self._process = None
-                self._thread = None
+        with tempfile.TemporaryDirectory(prefix="codex-micro-") as temp_dir:
+            text_path = Path(temp_dir) / "reply.txt"
+            wav_path = Path(temp_dir) / "reply.wav"
+            try:
+                text_path.write_text(text, encoding="utf-8")
+                creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                environment = os.environ.copy()
+                environment["CODEX_MICRO_SPEECH_TEXT"] = str(text_path)
+                environment["CODEX_MICRO_SPEECH_WAV"] = str(wav_path)
+                process = subprocess.Popen(
+                    ["powershell.exe", "-NoProfile", "-Command", _SPEECH_SCRIPT],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    creationflags=creationflags,
+                    env=environment,
+                )
+                with self._lock:
+                    self._process = process
+                _stdout, stderr = process.communicate()
+                if process.returncode:
+                    message = stderr.decode("utf-8", errors="replace").strip()
+                    LOGGER.warning("Windows TTS failed: %s", message)
+                elif wav_path.stat().st_size <= 44:
+                    LOGGER.warning("Windows TTS produced an empty WAV file")
+                else:
+                    winsound.PlaySound(str(wav_path), winsound.SND_FILENAME)
+            except OSError:
+                LOGGER.exception("could not start Windows TTS")
+            except RuntimeError:
+                LOGGER.exception("could not play Windows TTS audio")
+            finally:
+                with self._lock:
+                    if self._process is process:
+                        self._process = None
+                    self._thread = None
