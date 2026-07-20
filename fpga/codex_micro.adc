@@ -1,0 +1,37 @@
+set_pin_assignment { clk_50M } { LOCATION = P12; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+
+set_pin_assignment { key0_n } { LOCATION = P99; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { key1_n } { LOCATION = P98; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { key2_n } { LOCATION = P97; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { key3_n } { LOCATION = P96; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { key4_n } { LOCATION = P89; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+
+# Physical SW0 is the board's send switch.
+set_pin_assignment { send_sw } { LOCATION = P37; IOSTANDARD = LVCMOS33; PULLTYPE = PULLDOWN; }
+
+set_pin_assignment { uart_rx } { LOCATION = P83; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { uart_tx } { LOCATION = P84; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment { buzzer } { LOCATION = P53; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+
+set_pin_assignment { led[0] } { LOCATION = P38; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[1] } { LOCATION = P39; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[2] } { LOCATION = P40; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[3] } { LOCATION = P41; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[4] } { LOCATION = P42; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[5] } { LOCATION = P43; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[6] } { LOCATION = P45; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { led[7] } { LOCATION = P47; IOSTANDARD = LVCMOS33; }
+
+set_pin_assignment { seg_sel[0] } { LOCATION = P65; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_sel[1] } { LOCATION = P58; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_sel[2] } { LOCATION = P57; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_sel[3] } { LOCATION = P54; IOSTANDARD = LVCMOS33; }
+
+set_pin_assignment { seg_led[0] } { LOCATION = P75; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[1] } { LOCATION = P66; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[2] } { LOCATION = P60; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[3] } { LOCATION = P63; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[4] } { LOCATION = P64; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[5] } { LOCATION = P74; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[6] } { LOCATION = P59; IOSTANDARD = LVCMOS33; }
+set_pin_assignment { seg_led[7] } { LOCATION = P62; IOSTANDARD = LVCMOS33; }
