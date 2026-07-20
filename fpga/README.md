@@ -6,6 +6,7 @@
 
 - `KEY0..KEY4`：`P99/P98/P97/P96/P89`，低电平按下。
 - 物理上标为 `SW0` 的发送拨码：管脚 `P37`，向上为高电平。
+- `SW7` 语音播报使能：管脚 `P29`，向上后可在选择模式长按 K0~K3 播报状态4会话的最后回复。
 - 板载 UART：FPGA `uart_rx=P83`、`uart_tx=P84`。
 - 蜂鸣器：`P53`。
 - 8 个 LED：`P38/P39/P40/P41/P42/P43/P45/P47`。
@@ -33,7 +34,7 @@
 
 ## 下载
 
-TD 命令行在中文路径下可能把路径转换成 `??`，因此建议把整个仓库放到 ASCII 路径。发布包中已验证的 bitstream 位于 `../bitstream/codex_micro.bit`。
+TD 命令行在中文路径下可能把路径转换成 `??`，因此建议把工程或 bitstream 放到 ASCII 路径。发布包中已验证的 bitstream 位于 `../bitstream/codex_micro.bit`。
 
 临时下载到 FPGA SRAM：
 

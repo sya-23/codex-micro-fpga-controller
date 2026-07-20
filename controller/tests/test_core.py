@@ -7,6 +7,7 @@ from codex_micro.protocol import (
     EVENT_KEY_LONG,
     EVENT_KEY_UP,
     EVENT_SEND,
+    EVENT_SPEAK_REPLY,
     TYPE_BEEP,
 )
 from codex_micro.slots import SessionIdentity, SlotStatus
@@ -43,6 +44,28 @@ class FakeAdapter:
     def release_all(self): self.actions.append("release_all")
 
 
+class FakeReplyReader:
+    def __init__(self, message="last reply"):
+        self.message = message
+        self.session_ids = []
+
+    def read_last_reply(self, session_id):
+        self.session_ids.append(session_id)
+        return self.message
+
+
+class FakeSpeaker:
+    def __init__(self):
+        self.messages = []
+
+    def speak(self, message):
+        self.messages.append(message)
+        return True
+
+    def stop(self):
+        return None
+
+
 class ControllerTests(unittest.TestCase):
     def setUp(self):
         self.adapter = FakeAdapter()
@@ -70,6 +93,33 @@ class ControllerTests(unittest.TestCase):
 
         self.assertEqual(self.adapter.actions, [("activate", 0), "close_page"])
         self.assertIsNone(self.controller._open_slot)
+
+    def test_speech_event_reads_completed_slot_reply(self):
+        reader = FakeReplyReader("播报内容")
+        speaker = FakeSpeaker()
+        self.controller.reply_reader = reader
+        self.controller.speaker = speaker
+        self.controller.bind_identity(0, SessionIdentity("s0", "codex://s0"))
+        self.controller.set_status(0, SlotStatus.COMPLETED)
+
+        self.controller.handle_event(EVENT_SPEAK_REPLY, 0)
+        self.controller.handle_event(EVENT_KEY_UP, 0)
+
+        self.assertEqual(reader.session_ids, ["s0"])
+        self.assertEqual(speaker.messages, ["播报内容"])
+        self.assertNotIn(("activate", 0), self.adapter.actions)
+
+    def test_speech_event_ignores_non_completed_slot(self):
+        reader = FakeReplyReader()
+        speaker = FakeSpeaker()
+        self.controller.reply_reader = reader
+        self.controller.speaker = speaker
+        self.controller.bind_identity(0, SessionIdentity("s0", "codex://s0"))
+
+        self.controller.handle_event(EVENT_SPEAK_REPLY, 0)
+
+        self.assertEqual(reader.session_ids, [])
+        self.assertEqual(speaker.messages, [])
 
     def test_k4_short_toggles_mode_and_operation_keys(self):
         self.controller.handle_event(EVENT_KEY_DOWN, 4)

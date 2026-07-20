@@ -6,6 +6,7 @@ module codex_micro_top (
     input        key3_n,
     input        key4_n,
     input        send_sw,
+    input        speak_sw,
     input        uart_rx,
     output       uart_tx,
     output [7:0] led,
@@ -70,6 +71,13 @@ module codex_micro_top (
         .down_pulse(send_edge), .up_pulse(), .long_pulse()
     );
 
+    reg [2:0] speak_sw_sync;
+    always @(posedge clk_50M) begin
+        if (!rst_n) speak_sw_sync <= 3'b000;
+        else speak_sw_sync <= {speak_sw_sync[1:0], speak_sw};
+    end
+    wire speak_enabled = speak_sw_sync[2];
+
     reg        event_valid;
     reg [7:0]  event_code;
     reg [7:0]  event_id;
@@ -103,10 +111,10 @@ module codex_micro_top (
         else if (key2_up) begin source_event_code = 8'h02; source_event_id = 8'd2; end
         else if (key3_up) begin source_event_code = 8'h02; source_event_id = 8'd3; end
         else if (key4_up) begin source_event_code = 8'h02; source_event_id = 8'd4; end
-        else if (key0_long) begin source_event_code = 8'h03; source_event_id = 8'd0; end
-        else if (key1_long) begin source_event_code = 8'h03; source_event_id = 8'd1; end
-        else if (key2_long) begin source_event_code = 8'h03; source_event_id = 8'd2; end
-        else if (key3_long) begin source_event_code = 8'h03; source_event_id = 8'd3; end
+        else if (key0_long) begin source_event_code = speak_enabled ? 8'h11 : 8'h03; source_event_id = 8'd0; end
+        else if (key1_long) begin source_event_code = speak_enabled ? 8'h11 : 8'h03; source_event_id = 8'd1; end
+        else if (key2_long) begin source_event_code = speak_enabled ? 8'h11 : 8'h03; source_event_id = 8'd2; end
+        else if (key3_long) begin source_event_code = speak_enabled ? 8'h11 : 8'h03; source_event_id = 8'd3; end
         else if (key4_long) begin source_event_code = 8'h03; source_event_id = 8'd4; end
         else if (send_edge) begin source_event_code = 8'h10; source_event_id = 8'hff; end
         else source_event_valid = 1'b0;

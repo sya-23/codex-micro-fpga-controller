@@ -124,6 +124,30 @@ class SessionLogReader:
                 return observation
         return None
 
+    def read_last_reply(self, session_id: str) -> str | None:
+        """Return the final assistant text from the latest completed task."""
+        path = self.find_path(session_id)
+        if path is None:
+            return None
+        try:
+            lines = self._tail_lines(path)
+        except OSError:
+            LOGGER.debug("could not read session log %s", path, exc_info=True)
+            return None
+        for _offset, raw_line in reversed(lines):
+            try:
+                record = json.loads(raw_line.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if not isinstance(record, dict) or record.get("type") != "event_msg":
+                continue
+            payload = record.get("payload")
+            if not isinstance(payload, dict) or payload.get("type") != "task_complete":
+                continue
+            message = payload.get("last_agent_message")
+            return message.strip() if isinstance(message, str) and message.strip() else None
+        return None
+
     def _tail_lines(self, path: Path) -> list[tuple[int, bytes]]:
         with path.open("rb") as stream:
             stream.seek(0, 2)
@@ -143,9 +167,15 @@ class SessionLogReader:
 
 
 class SessionLogMonitor:
-    def __init__(self, controller, root: str | Path | None = None, interval: float = 0.8) -> None:
+    def __init__(
+        self,
+        controller,
+        root: str | Path | None = None,
+        interval: float = 0.8,
+        reader: SessionLogReader | None = None,
+    ) -> None:
         self.controller = controller
-        self.reader = SessionLogReader(root=root)
+        self.reader = reader or SessionLogReader(root=root)
         self.interval = max(0.25, interval)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None

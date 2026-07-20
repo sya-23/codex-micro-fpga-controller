@@ -10,14 +10,15 @@ from codex_micro.slots import SlotStatus
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
 
 
-def event_line(event_type: str, timestamp: str = "2026-07-20T03:00:00.000Z") -> str:
-    return json.dumps(
-        {
-            "timestamp": timestamp,
-            "type": "event_msg",
-            "payload": {"type": event_type},
-        }
-    )
+def event_line(
+    event_type: str,
+    timestamp: str = "2026-07-20T03:00:00.000Z",
+    last_agent_message: str | None = None,
+) -> str:
+    payload = {"type": event_type}
+    if last_agent_message is not None:
+        payload["last_agent_message"] = last_agent_message
+    return json.dumps({"timestamp": timestamp, "type": "event_msg", "payload": payload})
 
 
 class SessionLogTests(unittest.TestCase):
@@ -73,6 +74,28 @@ class SessionLogTests(unittest.TestCase):
             self.assertIsNotNone(observation)
             self.assertEqual(observation.status, SlotStatus.COMPLETED)
             self.assertEqual(observation.event_type, "task_complete")
+
+    def test_reader_returns_reply_from_latest_completed_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "sessions"
+            root.mkdir()
+            path = root / f"rollout-{SESSION_ID}.jsonl"
+            path.write_text(
+                "\n".join(
+                    [
+                        event_line("task_complete", last_agent_message="old reply"),
+                        event_line("task_started"),
+                        event_line(
+                            "task_complete",
+                            "2026-07-20T03:00:01.000Z",
+                            "latest reply",
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(SessionLogReader(root=root).read_last_reply(SESSION_ID), "latest reply")
 
 
 if __name__ == "__main__":

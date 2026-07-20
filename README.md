@@ -19,6 +19,8 @@ local session status.
   Codex/ChatGPT without closing the application.
 - Hold K1 for repeated Backspace; hold K2/K3 for repeated cursor movement.
 - SW0 sends the current message.
+- In selection mode, hold a completed slot key with SW7 up to read the latest
+  Codex reply aloud through the Windows Chinese SAPI voice.
 - Four-digit status display, eight status LEDs and completion buzzer.
 - Local REST API on `127.0.0.1:8765`.
 - Permanent SPI Flash programming script and a verified bitstream.
@@ -29,6 +31,7 @@ local session status.
 - Clock: 50 MHz
 - Keys: K0-K4
 - Send switch: physical SW0 on `P37`
+- Speech switch: SW7 on `P29`; up enables reply playback for long K0-K3
 - UART: RX `P83`, TX `P84`, 115200 baud
 - Buzzer: `P53`
 - LEDs: `P38/P39/P40/P41/P42/P43/P45/P47`
@@ -84,7 +87,9 @@ Selection mode:
 
 - Short K0-K3: open a bound conversation.
 - Short the same key again: minimize Codex/ChatGPT.
-- Long K0-K3: bind the current conversation to that slot.
+- Long K0-K3 with SW7 down: bind the current conversation to that slot.
+- Long K0-K3 with SW7 up and display value 4: speak the latest completed
+  reply for that slot.
 - Short K4: enter operation mode.
 
 Operation mode:
@@ -96,6 +101,11 @@ Operation mode:
 - Toggle SW0 upward: send.
 - Short K4: return to selection mode.
 - Long K4: clear the selected slot and return to selection mode.
+
+Reply playback requires the slot to be bound to a local Codex rollout JSONL
+session. The controller reads the latest `task_complete.last_agent_message`
+and uses the installed Windows `zh-CN` SAPI voice; it does not upload the
+conversation or access private desktop APIs.
 
 ## FPGA Build and Programming
 

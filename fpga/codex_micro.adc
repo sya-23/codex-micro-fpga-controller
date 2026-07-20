@@ -9,6 +9,9 @@ set_pin_assignment { key4_n } { LOCATION = P89; IOSTANDARD = LVCMOS33; PULLTYPE 
 # Physical SW0 is the board's send switch.
 set_pin_assignment { send_sw } { LOCATION = P37; IOSTANDARD = LVCMOS33; PULLTYPE = PULLDOWN; }
 
+# Logical SW7 enables long-press reply speech.
+set_pin_assignment { speak_sw } { LOCATION = P29; IOSTANDARD = LVCMOS33; PULLTYPE = PULLDOWN; }
+
 set_pin_assignment { uart_rx } { LOCATION = P83; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
 set_pin_assignment { uart_tx } { LOCATION = P84; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
 set_pin_assignment { buzzer } { LOCATION = P53; IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }

@@ -12,6 +12,7 @@ from .protocol import (
     EVENT_KEY_LONG,
     EVENT_KEY_UP,
     EVENT_SEND,
+    EVENT_SPEAK_REPLY,
     TYPE_BEEP,
     TYPE_EVENT,
     TYPE_LED_MASK,
@@ -33,9 +34,17 @@ class Mode(IntEnum):
 
 
 class Controller:
-    def __init__(self, adapter: DesktopAdapter, transport=None) -> None:
+    def __init__(
+        self,
+        adapter: DesktopAdapter,
+        transport=None,
+        reply_reader=None,
+        speaker=None,
+    ) -> None:
         self.adapter = adapter
         self.transport = transport
+        self.reply_reader = reply_reader
+        self.speaker = speaker
         self.slots = SlotRegistry()
         self.mode = Mode.SELECT
         self.selected_slot = 0
@@ -67,6 +76,12 @@ class Controller:
                 self._check_desktop_restart()
                 if event_code == EVENT_SEND:
                     self._send_current_message()
+                elif event_code == EVENT_SPEAK_REPLY:
+                    if key_id not in range(4):
+                        LOGGER.warning("ignored invalid speech slot: %d", key_id)
+                    else:
+                        self._long_seen[key_id] = True
+                        self.speak_last_reply(key_id)
                 elif key_id not in range(5):
                     LOGGER.warning("ignored invalid key id: %d", key_id)
                 elif event_code == EVENT_KEY_DOWN:
@@ -165,6 +180,25 @@ class Controller:
 
     def shutdown(self) -> None:
         self.adapter.release_all()
+        if self.speaker is not None:
+            self.speaker.stop()
+
+    def speak_last_reply(self, index: int) -> bool:
+        if self.mode != Mode.SELECT:
+            return False
+        slot = self.slots.get(index)
+        if (
+            not slot.bound
+            or slot.status != SlotStatus.COMPLETED
+            or self.reply_reader is None
+            or self.speaker is None
+        ):
+            return False
+        message = self.reply_reader.read_last_reply(slot.session_id)
+        if not message:
+            LOGGER.warning("no completed reply found for session %s", slot.session_id)
+            return False
+        return bool(self.speaker.speak(message))
 
     def observe_conversations(self, observations: list[ConversationObservation]) -> None:
         """Apply evidence from the ChatGPT conversation list conservatively.

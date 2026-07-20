@@ -8,7 +8,8 @@ import threading
 from codex_micro.core import Controller
 from codex_micro.desktop import VK_CONTROL, VK_RETURN, DesktopAdapter
 from codex_micro.server import ControllerHTTPServer
-from codex_micro.session_log import SessionLogMonitor
+from codex_micro.session_log import SessionLogMonitor, SessionLogReader
+from codex_micro.speech import WindowsSpeechSynthesizer
 from codex_micro.status_monitor import ChatGPTStatusMonitor
 from codex_micro.transport import SerialTransport
 
@@ -53,6 +54,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="disable read-only Codex JSONL lifecycle monitoring",
     )
+    parser.add_argument(
+        "--no-speech",
+        action="store_true",
+        help="disable Windows text-to-speech reply playback",
+    )
     return parser.parse_args()
 
 
@@ -70,7 +76,15 @@ def main() -> None:
         dry_run=args.dry_run,
         send_hotkey=send_hotkey(args.send_hotkey),
     )
-    controller = Controller(adapter)
+    session_reader = SessionLogReader(root=args.session_log_root or None)
+    speaker = None
+    if not args.no_speech and not args.dry_run:
+        speaker = WindowsSpeechSynthesizer()
+    controller = Controller(
+        adapter,
+        reply_reader=session_reader,
+        speaker=speaker,
+    )
     transport = None
     if not args.no_serial:
         transport = SerialTransport(
@@ -89,6 +103,7 @@ def main() -> None:
             controller,
             root=args.session_log_root or None,
             interval=args.status_interval,
+            reader=session_reader,
         )
         session_log_monitor.start()
     status_monitor = None

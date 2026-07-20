@@ -43,7 +43,7 @@ python main.py --serial-port COM5 --send-hotkey ctrl-enter
 ## 操作
 
 - 选择状态短按 K0~K3：首次打开已绑定会话；再次短按同一键最小化 ChatGPT/Codex，切换到其他会话键则直接打开对应会话。
-- 选择状态长按 K0~K3：用 `Ctrl+Alt+C` 和 `Ctrl+Alt+L` 绑定当前桌面会话。
+- 选择状态长按 K0~K3：SW7 向下时绑定当前桌面会话；SW7 向上且对应状态为4时，播报该会话最后一次完成回复。
 - 短按 K4：切换选择/操作状态。
 - 操作状态长按 K4：删除当前槽位并返回选择状态。
 - 操作状态 K0：按住/释放 Right Alt。
@@ -116,7 +116,13 @@ Invoke-RestMethod -Method Post `
 - 串口断开自动重连。
 - 默认只在串口连接时向 FPGA 同步状态；需要覆盖 FPGA 重配置后的状态丢失时，可调用 `/v1/sync`，或用 `--sync-interval 10` 开启低频同步。
 - 只读记录 ChatGPT/Codex 主窗口进程 ID；检测到桌面端重启后，下一次硬件事件会清空四个槽位并回到选择状态。
-- 程序退出时释放 Right Alt、Left、Right，避免按键卡住。
+- 程序退出时释放 Right Alt、Backspace、Left、Right，避免按键卡住。
+
+## 语音播报
+
+语音播报只对带本地 Codex rollout JSONL 的会话生效。Controller 从最新
+`task_complete.last_agent_message` 读取回复，并调用 Windows 离线 SAPI；优先选择
+`zh-CN` 语音。播报在线程中执行，不阻塞串口和按键。可用 `--no-speech` 关闭。
 - ChatGPT/Codex 桌面端目前没有公开的会话状态 API；本控制器不会读取私有接口或用坐标点击猜状态。列表状态读取失败时使用状态6或保留当前状态，不误报完成。
 
 ## 桌面端边界
